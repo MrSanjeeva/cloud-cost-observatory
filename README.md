@@ -46,9 +46,9 @@ MVP in progress
 
 ```mermaid
 graph LR
-  RAW[Raw cost JSON/CSV] -->|Parquet| CURATED[Curated lake (DuckDB)]
-  CURATED --> KPI[KPI tables]
-  KPI --> DASHBOARD[Streamlit App]
+    RAW["Raw cost JSON/CSV"] -->|Parquet| CURATED["Curated lake (DuckDB)"]
+    CURATED --> KPI["KPI tables"]
+    KPI --> DASHBOARD["Streamlit App"]
 ```
 
 ## License
