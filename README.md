@@ -38,6 +38,12 @@ python pipeline_polars.py
 streamlit run app/streamlit_app.py
 ```
 
+---
+
+### Want real AWS data instead of the synthetic sample?
+See **[docs/REAL_AWS_DATA.md](docs/REAL_AWS_DATA.md)** for step‑by‑step credentials setup.
+---
+
 ## Project Status
 
 MVP in progress
