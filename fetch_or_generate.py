@@ -11,6 +11,7 @@ import datetime as dt
 import pathlib
 import random
 import polars as pl
+import boto3
 from faker import Faker
 from tqdm import trange
 
@@ -18,7 +19,7 @@ RAW_DIR = pathlib.Path("data/raw")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 OUTFILE = RAW_DIR / "cost_usage_sample.csv"
 
-# ───────────────────────────────── synthetic ──────────────────────────────────
+# ----- Synthetic Data Generation -----
 
 
 def generate_synthetic(days: int = 90, rows_per_day: int = 60) -> None:
@@ -42,13 +43,12 @@ def generate_synthetic(days: int = 90, rows_per_day: int = 60) -> None:
             )
     pl.DataFrame(records).write_csv(OUTFILE)
     print(
-        f"✅ Synthetic CUR written to {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)")
+        f"Synthetic CUR written to {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)")
 
-# ──────────────────────────────── real AWS path ───────────────────────────────
+# ----- Real AWS path ------
 
 
 def fetch_from_cost_explorer(days: int = 90) -> None:
-    import boto3
     today = dt.date.today()
     start = (today - dt.timedelta(days=days)).strftime("%Y-%m-%d")
     end = today.strftime("%Y-%m-%d")
@@ -88,9 +88,9 @@ def fetch_from_cost_explorer(days: int = 90) -> None:
 
     pl.DataFrame(rows).write_csv(OUTFILE)
     print(
-        f"✅ Pulled {len(rows)} rows from AWS → {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)")
+        f"Pulled {len(rows)} rows from AWS → {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)")
 
-# ──────────────────────────────────── main ────────────────────────────────────
+# ------- main -------
 
 
 def main() -> None:
