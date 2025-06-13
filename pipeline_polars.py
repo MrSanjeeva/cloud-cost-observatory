@@ -26,16 +26,28 @@ df = (
  .write_parquet(CUR_DIR / "cur_usage.parquet")
  )
 
+# ----- 2a. Cost by service -----
+svc_daily = (
+    df.group_by(["usage_date", "service"])
+      .agg(cost_usd=pl.col("cost_usd").sum())
+      .pivot(index="usage_date", on="service", values="cost_usd")
+)
+svc_daily.write_parquet(CUR_DIR / "svc_daily.parquet")
+
 # ----- 2. Daily aggregate -----
 daily = (
     df.group_by("usage_date")
     .agg(
         total_cost_usd=pl.col("cost_usd").sum(),
         total_usage=pl.col("usage_amount").sum(),
+        row_cnt=pl.len(),                  # number of raw rows that day
     )
-    # fake idle %: treat usage < 0.5 as idle for demo purposes
     .with_columns(
-        idle_pct=pl.when(pl.col("total_usage") < 0.5)
+        avg_usage=pl.col("total_usage") / pl.col("row_cnt")   # per‑row average
+    )
+    # idle %: high (0.4) when average usage per row < 2.0 units
+    .with_columns(
+        idle_pct=pl.when(pl.col("avg_usage") < 2.0)
         .then(0.4)
         .otherwise(0.1)
     )
@@ -52,8 +64,16 @@ daily = daily.with_columns(
     )
 )
 
+# ----- Anomaly flag (±2 σ) -----
+mu = daily["total_cost_usd"].mean()
+sigma = daily["total_cost_usd"].std()
+daily = daily.with_columns(
+    is_anomaly=(pl.col("total_cost_usd") > mu + 2 * sigma) |
+               (pl.col("total_cost_usd") < mu - 2 * sigma)
+)
+
 (daily
  .write_parquet(CUR_DIR / "kpi_daily.parquet")
  )
 
-print("Wrote curated & KPI Parquet to data/curated/")
+print("Wrote curated, KPI, and service Parquet to data/curated/")

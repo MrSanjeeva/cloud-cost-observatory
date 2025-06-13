@@ -29,17 +29,26 @@ def generate_synthetic(days: int = 90, rows_per_day: int = 60) -> None:
     for d in trange(days, desc="Generating synthetic CUR"):
         day = base + dt.timedelta(days=d)
         for _ in range(rows_per_day):
+            weekday = day.weekday()  # 0 = Monday … 6 = Sunday
+            # Lower utilisation on weekends to create idle spikes
+            if weekday >= 5:  # Saturday or Sunday
+                usage_amt = round(random.uniform(0.0, 1.0), 3)  # make weekends even lower
+            else:  # Weekdays
+                usage_amt = round(random.uniform(2.0, 10.0), 3)
+
             records.append(
-                dict(
-                    usage_date=day.isoformat(),
-                    account_id=fake.random_int(100000000000, 999999999999),
-                    service=random.choice(
-                        ["EC2", "S3", "RDS", "Lambda", "CloudWatch"]),
-                    region=random.choice(
-                        ["us-east-1", "us-west-2", "eu-west-1"]),
-                    cost_usd=round(random.uniform(0.05, 25.0), 4),
-                    usage_amount=round(random.uniform(0.1, 10.0), 3),
-                )
+                {
+                    "usage_date": day.isoformat(),
+                    "account_id": fake.random_int(100000000000, 999999999999),
+                    "service": random.choice(
+                        ["EC2", "S3", "RDS", "Lambda", "CloudWatch"]
+                    ),
+                    "region": random.choice(
+                        ["us-east-1", "us-west-2", "eu-west-1"]
+                    ),
+                    "cost_usd": round(random.uniform(0.05, 25.0), 4),
+                    "usage_amount": usage_amt,
+                }
             )
     pl.DataFrame(records).write_csv(OUTFILE)
     print(
