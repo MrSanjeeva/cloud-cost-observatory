@@ -2,8 +2,9 @@
 
 [![CI](https://github.com/MrSanjeeva/cloud-cost-observatory/actions/workflows/ci.yml/badge.svg)](https://github.com/MrSanjeeva/cloud-cost-observatory/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
+[![Streamlit](https://img.shields.io/badge/Live Dashboard-ccobservatory.streamlit.app-orange)](https://ccobservatory.streamlit.app/)
 
-**Purpose —** End-to-end demo that ingests (or generates) cloud Cost-and-Usage data, builds KPI tables, and serves insights through a public Streamlit dashboard.
+**Purpose —** End‑to‑end demo that ingests AWS Cost‑and‑Usage data (or synthetic sample), builds curated Parquet tables, derives daily KPIs, and serves an interactive Streamlit dashboard for cost, idle‑percentage, service breakdown, and anomaly detection.
 
 ---
 
@@ -12,7 +13,9 @@
 - **Data ingest** — pull real Cost Explorer JSON _or_ generate synthetic data for offline demos.
 - **Transform & store** — incremental Parquet tables managed by DuckDB/Polars.
 - **KPI suite** — cost-per-team, idle-compute %, 30-day burn forecast, anomaly score.
-- **Dashboard** — Streamlit app with interactive filters and Slack-style alerts.
+- **Cost by service** — stacked‑area view highlights which AWS services drive spend.
+- **Anomaly detection** — red markers flag days ±2 σ from the 30‑day mean.
+- **Dashboard** — Streamlit app with date‑range slider, forecast card, idle‑% scatter, and live refresh.
 - **CI / Tests** — GitHub Actions runs lint + unit tests on every push.
 
 ---
@@ -40,21 +43,28 @@ streamlit run app/streamlit_app.py
 
 ---
 
-### Want real AWS data instead of the synthetic sample?
+## Live Demo
+
+**<https://ccobservatory.streamlit.app/>**
+
+## Want real AWS data instead of the synthetic sample?
 
 See **[docs/REAL_AWS_DATA.md](docs/REAL_AWS_DATA.md)** for step‑by‑step credentials setup.
 
 ## Project Status
 
-MVP in progress
+**Status —** ✅ Completed
 
 ## Architecture
 
+_Data lineage from raw CSV to dashboard_
+
 ```mermaid
 graph LR
-    RAW["Raw cost JSON/CSV"] -->|Parquet| CURATED["Curated lake (DuckDB)"]
-    CURATED --> KPI["KPI tables"]
-    KPI --> DASHBOARD["Streamlit App"]
+    RAW["Raw cost JSON/CSV"] --> CUR["Curated lake (Parquet)"]
+    CUR --> KPI["KPI tables"]
+    KPI --> APP["Streamlit App"]
+    CUR -. ad-hoc SQL .-> DUCK[/"DuckDB (queries Parquet)"/]
 ```
 
 ## License

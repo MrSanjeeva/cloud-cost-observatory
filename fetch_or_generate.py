@@ -19,6 +19,7 @@ RAW_DIR = pathlib.Path("data/raw")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 OUTFILE = RAW_DIR / "cost_usage_sample.csv"
 
+TEAM_CHOICES = ["alpha", "beta", "gamma"]
 # ----- Synthetic Data Generation -----
 
 
@@ -32,7 +33,7 @@ def generate_synthetic(days: int = 90, rows_per_day: int = 60) -> None:
             weekday = day.weekday()  # 0 = Monday … 6 = Sunday
             # Lower utilisation on weekends to create idle spikes
             if weekday >= 5:  # Saturday or Sunday
-                usage_amt = round(random.uniform(0.0, 1.0), 3)  # make weekends even lower
+                usage_amt = round(random.uniform(0.0, 1.0), 3)
             else:  # Weekdays
                 usage_amt = round(random.uniform(2.0, 10.0), 3)
 
@@ -40,6 +41,8 @@ def generate_synthetic(days: int = 90, rows_per_day: int = 60) -> None:
                 {
                     "usage_date": day.isoformat(),
                     "account_id": fake.random_int(100000000000, 999999999999),
+                    # ← added field
+                    "team": random.choice(TEAM_CHOICES),
                     "service": random.choice(
                         ["EC2", "S3", "RDS", "Lambda", "CloudWatch"]
                     ),
@@ -52,9 +55,10 @@ def generate_synthetic(days: int = 90, rows_per_day: int = 60) -> None:
             )
     pl.DataFrame(records).write_csv(OUTFILE)
     print(
-        f"Synthetic CUR written to {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)")
+        f"Synthetic CUR written to {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)"
+    )
 
-# ----- Real AWS path ------
+# ----- Real AWS path -----
 
 
 def fetch_from_cost_explorer(days: int = 90) -> None:
@@ -85,10 +89,13 @@ def fetch_from_cost_explorer(days: int = 90) -> None:
                     {
                         "usage_date": d,
                         "account_id": 0,
+                        "team": "unknown",                     # placeholder—map via tags later
                         "service": grp["Keys"][0],
                         "region": "multi",
                         "cost_usd": float(grp["Metrics"]["UnblendedCost"]["Amount"]),
-                        "usage_amount": float(grp["Metrics"]["UsageQuantity"]["Amount"]),
+                        "usage_amount": float(
+                            grp["Metrics"]["UsageQuantity"]["Amount"]
+                        ),
                     }
                 )
         token = resp.get("NextPageToken")
@@ -97,9 +104,10 @@ def fetch_from_cost_explorer(days: int = 90) -> None:
 
     pl.DataFrame(rows).write_csv(OUTFILE)
     print(
-        f"Pulled {len(rows)} rows from AWS → {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)")
+        f"Pulled {len(rows)} rows from AWS → {OUTFILE} ({OUTFILE.stat().st_size/1_000:.1f} KB)"
+    )
 
-# ------- main -------
+# ----- main -----
 
 
 def main() -> None:

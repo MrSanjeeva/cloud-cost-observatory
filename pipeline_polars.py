@@ -34,6 +34,14 @@ svc_daily = (
 )
 svc_daily.write_parquet(CUR_DIR / "svc_daily.parquet")
 
+# ----- 2b. Cost by team -----
+team_daily = (
+    df.group_by(["usage_date", "team"])
+      .agg(cost_usd=pl.col("cost_usd").sum())
+      .pivot(index="usage_date", on="team", values="cost_usd")
+)
+team_daily.write_parquet(CUR_DIR / "team_daily.parquet")
+
 # ----- 2. Daily aggregate -----
 daily = (
     df.group_by("usage_date")
@@ -76,4 +84,4 @@ daily = daily.with_columns(
  .write_parquet(CUR_DIR / "kpi_daily.parquet")
  )
 
-print("Wrote curated, KPI, and service Parquet to data/curated/")
+print("Wrote curated, KPI, service, and team Parquet to data/curated/")

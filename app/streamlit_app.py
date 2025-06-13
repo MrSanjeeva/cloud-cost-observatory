@@ -7,12 +7,15 @@ import pandas as pd
 CUR_DIR = pathlib.Path("data/curated")
 KPI_FILE = CUR_DIR / "kpi_daily.parquet"
 SVC_FILE = CUR_DIR / "svc_daily.parquet"
+TEAM_FILE = CUR_DIR / "team_daily.parquet"
 
 # --- Load data ---
 df = pl.read_parquet(KPI_FILE).sort("usage_date")
 df_pd = df.to_pandas()                       # Plotly wants pandas
 svc_df = pl.read_parquet(SVC_FILE).sort("usage_date")
 svc_pd = svc_df.to_pandas()
+team_df = pl.read_parquet(TEAM_FILE).sort("usage_date")
+team_pd = team_df.to_pandas()
 
 # --- Date range filter ---
 min_d, max_d = df_pd["usage_date"].min(), df_pd["usage_date"].max()
@@ -34,6 +37,10 @@ mask = (df_pd["usage_date"] >= pd.Timestamp(start_d)) & (
 df_pd = df_pd.loc[mask]
 svc_pd = svc_pd.loc[(svc_pd["usage_date"] >= pd.Timestamp(start_d)) & (
     svc_pd["usage_date"] <= pd.Timestamp(end_d))]
+team_pd = team_pd.loc[
+    (team_pd["usage_date"] >= pd.Timestamp(start_d))
+    & (team_pd["usage_date"] <= pd.Timestamp(end_d))
+]
 
 st.title("Cloud-Cost & Usage Observatory")
 
@@ -68,7 +75,8 @@ service_cols = [c for c in svc_pd.columns if c != "usage_date"]
 if service_cols and not svc_pd.empty:
     st.subheader("Cost by service")
     # Convert wide service table to long format for plotly
-    svc_long = svc_pd.melt(id_vars="usage_date", var_name="service", value_name="cost_usd")
+    svc_long = svc_pd.melt(id_vars="usage_date",
+                           var_name="service", value_name="cost_usd")
     area = px.area(
         svc_long,
         x="usage_date",
@@ -81,6 +89,24 @@ if service_cols and not svc_pd.empty:
 else:
     st.info("No service-level data available for the selected date range.")
 
+# --- Cost by team stacked area chart ---
+team_cols = [c for c in team_pd.columns if c != "usage_date"]
+if team_cols and not team_pd.empty:
+    st.subheader("Cost by team")
+    team_long = team_pd.melt(id_vars="usage_date",
+                             var_name="team", value_name="cost_usd")
+    team_area = px.area(
+        team_long,
+        x="usage_date",
+        y="cost_usd",
+        color="team",
+        labels={"cost_usd": "USD", "team": "Team"},
+        height=300,
+    )
+    st.plotly_chart(team_area, use_container_width=True)
+else:
+    st.info("No team-level data available for the selected date range.")
+
 st.subheader("Idle % scatter")
 scatter = px.scatter(
     df_pd,
@@ -91,4 +117,4 @@ scatter = px.scatter(
 )
 st.plotly_chart(scatter, use_container_width=True)
 
-st.caption("Demo data • Synthetic or live AWS CE • Built with Polars + Streamlit")
+st.caption("Demo data • Synthetic or live AWS CE • Includes service & team breakdown • Built with Polars + Streamlit")
